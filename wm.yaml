@@ -1,0 +1,93 @@
+defaults:
+  # 全局设置
+  seed: 0
+  logdir: './log'
+  deterministic_run: False
+  device: 'cuda:0'
+  precision: 32
+  debug: False
+  compile: False
+
+  # Model
+  num_actions: 3
+  # dyn_hidden: 512
+  dyn_hidden: 1024
+  # dyn_deter: 512
+  dyn_deter: 4096
+  dyn_stoch: 32
+  dyn_discrete: 32
+  dyn_rec_depth: 1
+  dyn_mean_act: 'none'
+  dyn_std_act: 'sigmoid2'
+  dyn_min_std: 0.1
+  # grad_heads: ['decoder', 'reward', 'cont']
+  grad_heads: ['decoder', 'reward']
+  # units: 512
+  units: 1024
+  act: 'SiLU'
+  norm: True
+  encoder:
+    mlp_keys: '$^'
+    cnn_keys: 'image'
+    act: 'SiLU'
+    norm: True
+    # cnn_depth: 32
+    cnn_depth: 96
+    kernel_size: 4
+    minres: 4
+    mlp_layers: 5
+    mlp_units: 1024
+    symlog_inputs: True
+  decoder:
+    mlp_keys: '$^'
+    cnn_keys: 'image'
+    act: 'SiLU'
+    norm: True
+    # cnn_depth: 32
+    cnn_depth: 96
+    kernel_size: 4
+    minres: 4
+    mlp_layers: 5
+    mlp_units: 1024
+    cnn_sigmoid: False
+    image_dist: mse
+    vector_dist: symlog_mse
+    outscale: 1.0
+  reward_head:
+    # layers: 2
+    layers: 5
+    dist: 'symlog_disc'
+    loss_scale: 1.0
+    outscale: 0.0
+  # cont_head:
+  #   layers: 2
+  #   loss_scale: 1.0
+  #   outscale: 1.0
+  dyn_scale: 0.5
+  rep_scale: 0.1
+  kl_free: 1.0
+  weight_decay: 0.0
+  unimix_ratio: 0.01
+  initial: 'learned'
+
+  # Training
+  load_from_checkpoint: null
+  train_episodes: 1800
+  train_iters: 50
+  log_every: 10
+  save_every: 1000
+  video_pred_log: True
+  video_log_every: 500
+  buffer_size: 1000000
+  batch_size: 16
+  batch_length: 64
+  model_lr: 1e-4
+  opt_eps: 1e-8
+  grad_clip: 1000
+  dataset_size: 1000000
+  opt: 'adam'
+
+debug:
+  debug: True
+  batch_size: 10
+  batch_length: 20

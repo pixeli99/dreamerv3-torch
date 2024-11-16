@@ -72,18 +72,19 @@ class WorldModel(nn.Module):
             device=config.device,
             name="Reward",
         )
-        self.heads["cont"] = networks.MLP(
-            feat_size,
-            (),
-            config.cont_head["layers"],
-            config.units,
-            config.act,
-            config.norm,
-            dist="binary",
-            outscale=config.cont_head["outscale"],
-            device=config.device,
-            name="Cont",
-        )
+        if 'cont' in config.grad_heads:
+            self.heads["cont"] = networks.MLP(
+                feat_size,
+                (),
+                config.cont_head["layers"],
+                config.units,
+                config.act,
+                config.norm,
+                dist="binary",
+                outscale=config.cont_head["outscale"],
+                device=config.device,
+                name="Cont",
+            )
         for name in config.grad_heads:
             assert name in self.heads, name
         self._model_opt = tools.Optimizer(
@@ -102,7 +103,7 @@ class WorldModel(nn.Module):
         # other losses are scaled by 1.0.
         self._scales = dict(
             reward=config.reward_head["loss_scale"],
-            cont=config.cont_head["loss_scale"],
+            # cont=config.cont_head["loss_scale"],
         )
 
     def _train(self, data):
