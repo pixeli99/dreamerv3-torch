@@ -1,7 +1,7 @@
 defaults:
   # 全局设置
   seed: 0
-  logdir: './log'
+  logdir: './log_bev'
   deterministic_run: False
   device: 'cuda:0'
   precision: 32
@@ -13,7 +13,7 @@ defaults:
   # dyn_hidden: 512
   dyn_hidden: 1024
   # dyn_deter: 512
-  dyn_deter: 4096
+  dyn_deter: 1024
   dyn_stoch: 32
   dyn_discrete: 32
   dyn_rec_depth: 1
@@ -71,15 +71,17 @@ defaults:
   initial: 'learned'
 
   # Training
-  load_from_checkpoint: null
+  max_cached_episodes: 1000
+  use_env_interaction: False
+  load_from_checkpoint: "/18940970966/dreamerv3-torch/log_bev/model_step_9000.pth"
   train_episodes: 1800
-  train_iters: 50
+  train_iters: 5000
   log_every: 10
   save_every: 1000
   video_pred_log: True
-  video_log_every: 500
+  video_log_every: 100
   buffer_size: 1000000
-  batch_size: 16
+  batch_size: 24
   batch_length: 64
   model_lr: 1e-4
   opt_eps: 1e-8

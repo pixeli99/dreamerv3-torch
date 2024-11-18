@@ -12,10 +12,13 @@ sys.path.append(str(pathlib.Path(__file__).parent))
 
 import models
 import tools
-from utils import ReplayBuffer
-from metadrive.envs.scenario_env import ScenarioEnv
+from utils import ReplayBuffer, TopDownScenarioEnvV2
+# from metadrive.envs.scenario_env import ScenarioEnv
+
 from metadrive.policy.replay_policy import ReplayEgoCarPolicy
 from metadrive.engine.asset_loader import AssetLoader
+
+from tqdm import tqdm
 
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 
@@ -24,7 +27,7 @@ to_np = lambda x: x.detach().cpu().numpy()
 def make_env(config):
     # 配置 MetaDrive 环境
     nuscenes_data = AssetLoader.file_path("/18940970966/nuplan_mini", "meta_drive", unix_style=False)
-    env = ScenarioEnv(
+    env = TopDownScenarioEnvV2(
         {
             "reactive_traffic": False,
             "use_render": False,
@@ -51,7 +54,7 @@ def main(config):
     env = make_env(config)
 
     # 定义世界模型
-    shape = (128, 128, 3)
+    shape = (128, 128, 6)
     space = gym.spaces.Box(low=0, high=255, shape=shape, dtype=np.uint8)
     world_model = models.WorldModel(
         obs_space=gym.spaces.Dict({"image": space}),
@@ -75,47 +78,39 @@ def main(config):
     metrics = {}
     
     for episode in range(config.train_episodes):
-        obs, _ = env.reset()
-        terminated = False
-        episode_steps = 0
-        # 获取策略（这里使用环境自带的策略）
-        policy = env.engine.get_policy(env.current_track_agent.name)
+        if config.use_env_interaction:
+            obs, _ = env.reset()
+            terminated = False
+            episode_steps = 0
+            policy = env.engine.get_policy(env.current_track_agent.name)
 
-        obs, reward, terminated, truncated, info = env.step([0, 3])
-        
-        while not terminated:
-            # 渲染环境，获取图像观测
-            obs_rgb = env.render(
-                mode="topdown",
-                window=False,
-                screen_record=True,
-                film_size=(1600, 1600),
-                screen_size=(128, 128),
-                scaling=4,
-                draw_contour=False,
-                num_stack=0,
-                target_agent_heading_up=True
-            )
-            # 获取动作
-            policy_action = policy.get_action_info()
-            velocity = policy_action["velocity"]
-            angular_velocity = policy_action["angular_velocity"]
-            action = np.array(velocity.tolist() + [angular_velocity])
-
-            is_first = episode_steps == 0
             obs, reward, terminated, truncated, info = env.step([0, 3])
             
-            is_terminal = terminated or truncated
-            buffer.add(obs_rgb, action, reward, is_terminal, is_first)
-            episode_steps += 1
-            # 将数据添加到缓冲区
+            while not terminated:
+                obs_rgb = obs
+                policy_action = policy.get_action_info()
+                velocity = policy_action["velocity"]
+                angular_velocity = policy_action["angular_velocity"]
+                action = np.array(velocity.tolist() + [angular_velocity])
+
+                is_first = episode_steps == 0
+                obs, reward, terminated, truncated, info = env.step([0, 3])
+                
+                is_terminal = terminated or truncated
+                buffer.add(obs_rgb, action, reward, is_terminal, is_first)
+                episode_steps += 1
+        else:
+            # 加载本地缓存的轨迹数据
+            buffer.load_episodes(limit=config.max_cached_episodes)
+            print(f"Loaded {len(buffer)} episodes from local cache.")
 
         # 检查缓冲区大小
-        if len(buffer) < 500:
-            continue
+        # if len(buffer) < config.batch_length * config.batch_size:
+        #     continue
+        # continue
 
         # 从缓冲区采样数据进行训练
-        for _ in range(config.train_iters):
+        for _ in tqdm(range(config.train_iters)):
             global_step += 1
             batch = buffer.sample(config.batch_size)
             obs_batch, action_batch, reward_batch, is_first_batch, is_terminal_batch = batch
